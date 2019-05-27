@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="wireshark" basedir=".">
+
+  <dirname property="app.basedir" file="${ant.file.wireshark}"/>
+  <property name="build.properties" value="${app.basedir}/build.properties"/>
+  <property file="${build.properties}"/>
+
+  <!-- Load Portapps core build -->
+  <property name="core.basedir" location="${app.basedir}\${core.dir}"/>
+  <fail unless="core.basedir" message="Core directory '${core.basedir}' not found in ${core.basedir}"/>
+  <echo message="Core found in ${core.basedir}" level="debug"/>
+
+  <!-- Import build-app.xml  -->
+  <import file="${core.basedir}\.build\build-app.xml"/>
+
+  <!-- Targets -->
+  <target name="release" depends="release.app" description="Release"/>
+
+  <target name="prepare">
+    <delete dir="${extract.path}\$PLUGINSDIR"/>
+    <delete file="${extract.path}\dftest.exe"/>
+    <delete file="${extract.path}\uninstall.exe"/>
+    <delete file="${extract.path}\user-guide.chm"/>
+    <move todir="${extract.path}\deps">
+      <fileset dir="${extract.path}">
+        <include name="npcap*"/>
+        <include name="USBPcapSetup*"/>
+        <include name="vcredist*"/>
+      </fileset>
+    </move>
+  </target>
+
+</project>
