@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.0.4-3 (2019/09/13)
+
+* Wireshark 3.0.4
+* Disable auto update check (Issue #1)
+* Portapps 1.26.1
+
 ## 3.0.3-2 (2019/07/19)
 
 * Wireshark 3.0.3
