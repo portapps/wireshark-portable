@@ -22,7 +22,7 @@
     <delete file="${extract.path}\uninstall.exe"/>
     <delete file="${extract.path}\user-guide.chm"/>
     <move todir="${extract.path}\deps">
-      <fileset dir="${extract.path}">
+      <fileset dir="${extract.path}" defaultexcludes="no">
         <include name="npcap*"/>
         <include name="USBPcapSetup*"/>
         <include name="vcredist*"/>
