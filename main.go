@@ -25,6 +25,10 @@ func init() {
 func main() {
 	utl.CreateFolder(app.DataPath)
 	app.Process = utl.PathJoin(app.AppPath, "Wireshark.exe")
+	app.Args = []string{
+		"-o",
+		"gui.update.enabled:FALSE",
+	}
 
 	utl.OverrideEnv("WIRESHARK_APPDATA", app.DataPath)
 
