@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.2.0-7 (2019/12/19)
+
+* Wireshark 3.2.0
+* Portapps 1.31.0
+
 ## 3.0.7-6 (2019/12/06)
 
 * Wireshark 3.0.7
