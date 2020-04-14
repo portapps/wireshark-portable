@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.2.3-10 (2020/04/14)
+
+* Wireshark 3.2.3
+* Portapps 2.1.2
+
 ## 3.2.2-9 (2020/03/04)
 
 * Wireshark 3.2.2
