@@ -33,5 +33,6 @@ func main() {
 
 	utl.OverrideEnv("WIRESHARK_APPDATA", app.DataPath)
 
+	defer app.Close()
 	app.Launch(os.Args[1:])
 }
