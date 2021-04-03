@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.4.4-16 (2021/04/03)
+
+* Wireshark 3.4.4
+* Portapps 3.3.0
+* No more win32 release
+
 ## 3.4.2-15 (2020/12/19)
 
 * Wireshark 3.4.2
