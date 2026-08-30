@@ -7,7 +7,6 @@ import (
 
 	"github.com/portapps/portapps/v3"
 	"github.com/portapps/portapps/v3/pkg/log"
-	"github.com/portapps/portapps/v3/pkg/utl"
 )
 
 var (
@@ -24,7 +23,9 @@ func init() {
 }
 
 func main() {
-	utl.CreateFolder(app.DataPath)
+	if err := os.MkdirAll(app.DataPath, os.ModePerm); err != nil {
+		log.Fatal().Err(err).Msg("Cannot create data directory.")
+	}
 	app.Process = filepath.Join(app.AppPath, "Wireshark.exe")
 	app.Args = []string{
 		"-o",
