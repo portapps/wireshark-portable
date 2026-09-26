@@ -1,0 +1,132 @@
+name: update-app
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 9 * * *'
+  push:
+    branches:
+      - 'master'
+  pull_request:
+    paths:
+      - '.github/workflows/update-app.yml'
+      - 'build.properties'
+
+jobs:
+  update:
+    if: github.event_name != 'pull_request'
+    runs-on: windows-latest
+    environment: update-app # secrets are gated by this environment
+    timeout-minutes: 10
+    steps:
+      -
+        name: GitHub auth token from GitHub App
+        id: write-app
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.PORTAPPS_BOT_CLIENT_ID }}
+          private-key: ${{ secrets.PORTAPPS_BOT_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: write
+          permission-pull-requests: write
+      -
+        name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          token: ${{ steps.write-app.outputs.token }}
+          fetch-depth: 0
+          persist-credentials: false
+      -
+        name: Update Wireshark
+        id: update
+        shell: pwsh
+        run: &update-script |
+          $feedUrl = 'https://www.wireshark.org/update/0/Wireshark/0.0.0/Windows/x86-64/en-US/stable.xml'
+          [xml]$feed = (Invoke-WebRequest -Uri $feedUrl).Content
+          $releases = foreach ($item in $feed.rss.channel.item) {
+            if ($item.title -notmatch '^Version (\d+\.\d+\.\d+)$') {
+              throw "Unexpected Wireshark release title: $($item.title)"
+            }
+            $version = $Matches[1]
+            $url = [string]$item.enclosure.url
+            if ($url -notmatch "^https://[^/]+\.wireshark\.org/win64/all-versions/Wireshark-$([regex]::Escape($version))-x64\.exe$") {
+              throw "Unexpected Wireshark installer URL: $url"
+            }
+            [pscustomobject]@{ Version = [version]$version; Url = $url }
+          }
+          if (-not $releases) {
+            throw "No stable Wireshark releases found at $feedUrl"
+          }
+          $latest = $releases | Sort-Object Version -Descending | Select-Object -First 1
+          $version = $latest.Version.ToString()
+
+          $path = Join-Path $env:GITHUB_WORKSPACE 'build.properties'
+          $content = [IO.File]::ReadAllText($path)
+          function Get-Property($name) {
+            $match = [regex]::Match($content, "(?m)^$([regex]::Escape($name))[ \t]*=[ \t]*(.+)$")
+            if (-not $match.Success) { throw "Missing $name in build.properties" }
+            return $match.Groups[1].Value.Trim()
+          }
+          function Set-Property($name, $value) {
+            $pattern = "(?m)^($([regex]::Escape($name))[ \t]*=[ \t]*).+$"
+            return [regex]::Replace($content, $pattern, { param($match) $match.Groups[1].Value + $value })
+          }
+
+          $currentVersion = Get-Property 'app.version'
+          $release = [int](Get-Property 'app.release')
+          if ($version -ne $currentVersion) { $release++ }
+          $content = Set-Property 'app.version' $version
+          $content = Set-Property 'atf.win64.url' $latest.Url
+          $content = Set-Property 'app.release' $release
+          [IO.File]::WriteAllText($path, $content, [Text.UTF8Encoding]::new($false))
+
+          "title=Wireshark $version" >> $env:GITHUB_OUTPUT
+          "version=$version" >> $env:GITHUB_OUTPUT
+      -
+        name: Create pull request
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        with:
+          base: ${{ github.event.repository.default_branch }}
+          branch: update-wireshark
+          token: ${{ steps.write-app.outputs.token }}
+          commit-message: ${{ steps.update.outputs.title }}
+          title: ${{ steps.update.outputs.title }}
+          signoff: true
+          sign-commits: true
+          delete-branch: true
+          body: |
+            This updates Wireshark to ${{ steps.update.outputs.version }}.
+
+  diff:
+    if: github.event_name == 'pull_request'
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      -
+        name: Update Wireshark
+        shell: pwsh
+        run: *update-script
+      -
+        name: Show diff
+        shell: pwsh
+        run: |
+          $diff = git --no-pager diff -- build.properties
+          if ($diff) {
+            $diff
+          } else {
+            Write-Host "No update diff."
+          }
